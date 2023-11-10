@@ -39,11 +39,12 @@ class DAT():
         
         
     def augment_img(self, img, mask):
-        flipped = np.fliplr(img)
-        flipped_mask = np.fliplr(mask)
-        hist_eq = exposure.equalize_hist(img)
+        flippedlr = np.fliplr(img)
+        flippedlr_mask = np.fliplr(mask)
+        flippedud = np.flipud(img)
+        flippedup_mask = np.flipud(mask)
         
-        return flipped, flipped_mask, hist_eq
+        return flippedlr, flippedlr_mask, flippedud, flippedup_mask
     
     
     def augment_dataset(self):
@@ -52,15 +53,16 @@ class DAT():
         for i in tqdm(range(len(self.dataset))):
             img = self.dataset[i, :, :, 0]
             mask = self.dataset[i, :, :, 1]
-            f, f_mask, h = self.augment_img(img, mask)
+            flr, flr_mask, fud, fud_mask = self.augment_img(img, mask)
             self.aug_dataset[idx, :, :, 0] = img
             self.aug_dataset[idx, :, :, 1] = mask
             idx += 1
-            self.aug_dataset[idx, :, :, 0] = f
-            self.aug_dataset[idx, :, :, 1] = f_mask
+            self.aug_dataset[idx, :, :, 0] = flr
+            self.aug_dataset[idx, :, :, 1] = flr_mask
             idx += 1
-            self.aug_dataset[idx, :, :, 0] = h
-            self.aug_dataset[idx, :, :, 1] = mask
+            self.aug_dataset[idx, :, :, 0] = fud
+            self.aug_dataset[idx, :, :, 1] = fud_mask
+            idx += 1
             
     
     def save_dataset(self):
