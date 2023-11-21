@@ -21,8 +21,20 @@ class DAT():
     def execute(self):
         self.init_paths()
         self.load_dataset()
+        s = 0
+        for i in range(self.dataset.shape[0]):
+            if np.count_nonzero(self.dataset[i, :, :, 1]) > 0:
+                s += 1
+                
+        print(self.dataset.shape[0], s)
         self.init_comps()
         self.augment_dataset()
+        s = 0
+        for i in range(self.aug_dataset.shape[0]):
+            if np.count_nonzero(self.aug_dataset[i, :, :, 1]) > 0:
+                s += 1
+                
+        print(self.aug_dataset.shape[0], s)
         self.save_dataset()
         
     
@@ -31,7 +43,18 @@ class DAT():
         
         
     def aug_dataset_len(self):
-        return int(self.params['aug_factor']) * self.dataset.shape[0]
+        s = 0
+        for i in range(self.dataset.shape[0]):
+            if np.count_nonzero(self.dataset[i, :, :, 1]) > 0:
+                s += 1
+        nh = int(self.params['aug_nh_factor']) * s
+        h = int(self.params['aug_h_factor']) * (self.dataset.shape[0] - s)
+        print("Original dataset: ", self.dataset.shape)
+        print("Healthy: ", self.dataset.shape[0] - s)
+        print("Non Healthy: ", s)
+        print("Factors: ", int(self.params['aug_h_factor']), int(self.params['aug_nh_factor']))
+        print("Total healthy - non healthy: ", h, nh)
+        return h + nh
     
     
     def init_comps(self):
@@ -43,8 +66,8 @@ class DAT():
         self.dataset = np.load(self.path_to_dataset)
     
     
-    def generate_hlf(self, img):
-        m = nn.Conv2d(1, int(self.params['aug_factor']), 3, stride=2, padding=(1, 1))
+    def generate_hlf(self, img, factor):
+        m = nn.Conv2d(1, factor, 3, stride=2, padding=(1, 1))
         input = torch.from_numpy(img)
         input = torch.unsqueeze(input, 0)
         input = torch.unsqueeze(input, 0)
@@ -75,14 +98,17 @@ class DAT():
             mask = self.dataset[i, :, :, 1]
             mask = cv2.resize(mask, (256, 256))
             
-            img_augs = self.generate_hlf(img)
+            factor = int(self.params['aug_nh_factor'])
+            if np.count_nonzero(self.dataset[i, :, :, 1]) == 0:
+                factor = int(self.params['aug_h_factor'])
+            img_augs = self.generate_hlf(img, factor)
             slot_s = idx
-            slot_e = idx + int(self.params['aug_factor'])
+            slot_e = idx + factor
             self.aug_dataset[slot_s: slot_e, :, :, 0] = img_augs
             for w in range(slot_s, slot_e):
                 self.aug_dataset[w, :, :, 1] = mask
             
-            idx += int(self.params['aug_factor'])
+            idx += factor
         self.dataset_random_flip()
             
     
