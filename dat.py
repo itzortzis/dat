@@ -47,8 +47,8 @@ class DAT():
         for i in range(self.dataset.shape[0]):
             if np.count_nonzero(self.dataset[i, :, :, 1]) > 0:
                 s += 1
-        nh = int(self.params['aug_nh_factor']) * s
-        h = int(self.params['aug_h_factor']) * (self.dataset.shape[0] - s)
+        nh = 2 * int(self.params['aug_nh_factor']) * s
+        h = 2 * int(self.params['aug_h_factor']) * (self.dataset.shape[0] - s)
         print("Original dataset: ", self.dataset.shape)
         print("Healthy: ", self.dataset.shape[0] - s)
         print("Non Healthy: ", s)
@@ -79,6 +79,32 @@ class DAT():
         return img_augs
     
     
+    def generate_crops(self, img, mask, factor):
+        img_augs = np.zeros((factor, 256, 256, 2))
+        
+        for i in range(factor):
+            h = random.randint(0, 127)
+            w = random.randint(0, 127)
+            img_augs[i, :, :, 0] = img[h: h+256, w: w+256]
+            img_augs[i, :, :, 1] = mask[h: h+256, w: w+256]
+        
+        return img_augs
+    
+    
+    def augs_random_flip(self, augs):
+        
+        for i in range(augs.shape[0]):
+            r = random.randint(0, 2)
+            if r == 0:
+                augs[i, :, :, 0] = np.fliplr(augs[i, :, :, 0])
+                augs[i, :, :, 1] = np.fliplr(augs[i, :, :, 1])
+            if r == 1:
+                augs[i, :, :, 0] = np.flipud(augs[i, :, :, 0])
+                augs[i, :, :, 1] = np.flipud(augs[i, :, :, 1])
+        
+        return augs
+    
+    
     def dataset_random_flip(self):
         for i in range(self.aug_dataset_len()):
             r = random.randint(0, 2)
@@ -96,20 +122,41 @@ class DAT():
         for i in tqdm(range(len(self.dataset))):
             img = self.dataset[i, :, :, 0]
             mask = self.dataset[i, :, :, 1]
-            mask = cv2.resize(mask, (256, 256))
             
             factor = int(self.params['aug_nh_factor'])
             if np.count_nonzero(self.dataset[i, :, :, 1]) == 0:
                 factor = int(self.params['aug_h_factor'])
-            img_augs = self.generate_hlf(img, factor)
+            img_augs = self.generate_crops(img, mask, factor)
             slot_s = idx
             slot_e = idx + factor
-            self.aug_dataset[slot_s: slot_e, :, :, 0] = img_augs
-            for w in range(slot_s, slot_e):
-                self.aug_dataset[w, :, :, 1] = mask
-            
+            self.aug_dataset[slot_s: slot_e, :, :, :] = img_augs
             idx += factor
+            slot_s = idx
+            slot_e = idx + factor
+            self.aug_dataset[slot_s: slot_e, :, :, :] = self.augs_random_flip(img_augs)
+            idx += factor
+            
         self.dataset_random_flip()
+    # def augment_dataset(self):
+        
+    #     idx = 0
+    #     for i in tqdm(range(len(self.dataset))):
+    #         img = self.dataset[i, :, :, 0]
+    #         mask = self.dataset[i, :, :, 1]
+    #         mask = cv2.resize(mask, (256, 256))
+            
+    #         factor = int(self.params['aug_nh_factor'])
+    #         if np.count_nonzero(self.dataset[i, :, :, 1]) == 0:
+    #             factor = int(self.params['aug_h_factor'])
+    #         img_augs = self.generate_hlf(img, factor)
+    #         slot_s = idx
+    #         slot_e = idx + factor
+    #         self.aug_dataset[slot_s: slot_e, :, :, 0] = img_augs
+    #         for w in range(slot_s, slot_e):
+    #             self.aug_dataset[w, :, :, 1] = mask
+            
+    #         idx += factor
+    #     self.dataset_random_flip()
             
     
     def save_dataset(self):
